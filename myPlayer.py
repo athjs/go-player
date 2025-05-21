@@ -10,7 +10,7 @@ import Goban
 from random import choice
 from playerInterface import *
 import torch
-
+from palluat_pereira_pedro import GoCNN
 
 WHITE = 0
 BLACK = 1
@@ -26,14 +26,14 @@ class myPlayer(PlayerInterface):
     def __init__(self):
         self._board = Goban.Board()
         self._mycolor = None
-        # self.model = goplayer()
-        # self.load_state_dict(torch.load("goplayer.pth"))
-        # self.eval()
+        self.model = GoCNN()
+        self.model.load_state_dict(torch.load("./final_go_model.pth"))
+        self.model.eval()
 
     def getPlayerName(self):
         return "GoGoDanceur"
 
-    def evaluate_board(self,board ,color):
+    def evaluate_board(self, board, color):
         white, black = 0, 0
         for line in range(8):
             for column in range(8):
@@ -48,7 +48,7 @@ class myPlayer(PlayerInterface):
         self, board, depth: int, alpha: float, beta: float, isMaximating: bool
     ):
         if depth == 0 or self._board.is_game_over():
-            return self.evaluate_board(self._board,self._mycolor), None
+            return self.evaluate_board(self._board, self._mycolor), None
 
         moves = board.legal_moves()
         if isMaximating:
@@ -85,7 +85,7 @@ class myPlayer(PlayerInterface):
         if self._board.is_game_over():
             print("Referee told me to play but the game is over!")
             return "PASS"
-        _, bestMove = self.alphaBeta(self._board, 3, float('-inf'), float('inf'), True)
+        _, bestMove = self.alphaBeta(self._board, 2, float("-inf"), float("inf"), True)
         if bestMove == None:
             moves = self._board.legal_moves()
             bestMove = choice(moves)
