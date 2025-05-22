@@ -12,10 +12,10 @@ from playerInterface import *
 import torch
 from palluat_pereira_pedro import GoCNN, position_predict
 
-WHITE = 2  # Correction: doit correspondre aux constantes de Goban
+WHITE = 2  
 BLACK = 1
 
-
+#Nous permet de transformer un plateau en coups utilisables par predict_game
 def board_to_tensor(board: Goban.Board, current_color: int):
     size = 8
     black_plane = torch.zeros(size, size, dtype=torch.float32)
@@ -25,7 +25,7 @@ def board_to_tensor(board: Goban.Board, current_color: int):
         for x in range(size):
             flat_index = y * size + x
             stone = board._board[flat_index]
-            if stone == Goban.Board._BLACK:  # Utiliser les constantes de Goban
+            if stone == Goban.Board._BLACK:  
                 black_plane[y][x] = 1.0
             elif stone == Goban.Board._WHITE:
                 white_plane[y][x] = 1.0
@@ -48,12 +48,11 @@ class myPlayer(PlayerInterface):
         self.model.eval()
 
     def getPlayerName(self):
-        return "GoGoDanceur"
+        return "BeforeYouGoGo"
 
     def evaluate_board(self, board: Goban.Board, color: int) -> float:
         input_tensor = board_to_tensor(board, color)
-        with torch.no_grad():
-            prediction = self.model(input_tensor).item()
+        prediction = self.model(input_tensor).item()
         return prediction
 
     def alphaBeta(
@@ -143,7 +142,7 @@ class myPlayer(PlayerInterface):
         return Goban.Board.flat_to_name(bestMove)
 
     def playOpponentMove(self, move):
-        print("Opponent played ", move)  # New here
+        print("Opponent played ", move) 
         # the board needs an internal represetation to push the move.  Not a string
         self._board.push(Goban.Board.name_to_flat(move))
 
