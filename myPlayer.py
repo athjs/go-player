@@ -10,11 +10,27 @@ import Goban
 from random import choice
 from playerInterface import *
 import torch
-from palluat_pereira_pedro import GoCNN
+from palluat_pereira_pedro import GoCNN, position_predict
 
-WHITE = 0
+WHITE = 2  # Correction: doit correspondre aux constantes de Goban
 BLACK = 1
 
+
+def board_to_tensor(board: Goban.Board, current_color: int):
+    size = 8
+    black_plane = torch.zeros(size, size, dtype=torch.float32)
+    white_plane = torch.zeros(size, size, dtype=torch.float32)
+
+    for y in range(size):
+        for x in range(size):
+            flat_index = y * size + x
+            stone = board._board[flat_index]
+            if stone == Goban.Board._BLACK:  # Utiliser les constantes de Goban
+                black_plane[y][x] = 1.0
+            elif stone == Goban.Board._WHITE:
+                white_plane[y][x] = 1.0
+
+    return torch.stack([black_plane, white_plane]).unsqueeze(0)
 
 class myPlayer(PlayerInterface):
     """Example of a random player for the go. The only tricky part is to be able to handle
@@ -26,57 +42,65 @@ class myPlayer(PlayerInterface):
     def __init__(self):
         self._board = Goban.Board()
         self._mycolor = None
+        self.maxDepth = 3
         self.model = GoCNN()
-        self.model.load_state_dict(torch.load("./final_go_model.pth"))
+        self.model.load_state_dict(torch.load("best_go_model.pth"))
         self.model.eval()
 
     def getPlayerName(self):
         return "GoGoDanceur"
 
-    def evaluate_board(self, board, color):
-        white, black = 0, 0
-        for line in range(8):
-            for column in range(8):
-                if board[Goban.Board.flatten((line, column))] == color:
-                    if self._mycolor == WHITE:
-                        white += 1
-                    else:
-                        black += 1
-        return (black - white) if color == BLACK else (white - black)
+    def evaluate_board(self, board: Goban.Board, color: int) -> float:
+        input_tensor = board_to_tensor(board, color)
+        with torch.no_grad():
+            prediction = self.model(input_tensor).item()
+        return prediction
 
     def alphaBeta(
         self, board, depth: int, alpha: float, beta: float, isMaximating: bool
     ):
-        if depth == 0 or self._board.is_game_over():
-            return self.evaluate_board(self._board, self._mycolor), None
+        if depth == 0 or board.is_game_over():
+            score = self.evaluate_board(board, self._mycolor)
+            if self._mycolor == Goban.Board._WHITE:
+                score = 1.0 - score
+            return score, None
 
         moves = board.legal_moves()
+        if not moves:
+            return self.evaluate_board(board, self._mycolor), None
+            
+        bestMove = moves[0]  
+        
         if isMaximating:
-            bestMove = None
             maxEval = float("-inf")
             for move in moves:
-                board.push(move)
-                eval, _ = self.alphaBeta(board, depth - 1, alpha, beta, False)
+                if not board.push(move):  
+                    continue
+                eval_score, _ = self.alphaBeta(board, depth - 1, alpha, beta, False)
                 board.pop()
-                if maxEval < eval:
-                    maxEval = eval
+                
+                if eval_score > maxEval:
+                    maxEval = eval_score
                     bestMove = move
-                alpha = max(alpha, eval)
+                    
+                alpha = max(alpha, eval_score)
                 if beta <= alpha:
                     break
             return maxEval, bestMove
 
         else:
-            bestMove = None
             minEval = float("inf")
             for move in moves:
-                board.push(move)
-                eval, _ = self.alphaBeta(board, depth - 1, alpha, beta, False)
+                if not board.push(move): 
+                    continue
+                eval_score, _ = self.alphaBeta(board, depth - 1, alpha, beta, True)
                 board.pop()
-                if minEval > eval:
-                    minEval = eval
+                
+                if eval_score < minEval:
+                    minEval = eval_score
                     bestMove = move
-                beta = min(beta, eval)
+                    
+                beta = min(beta, eval_score)
                 if beta <= alpha:
                     break
             return minEval, bestMove
@@ -85,16 +109,37 @@ class myPlayer(PlayerInterface):
         if self._board.is_game_over():
             print("Referee told me to play but the game is over!")
             return "PASS"
-        _, bestMove = self.alphaBeta(self._board, 2, float("-inf"), float("inf"), True)
-        if bestMove == None:
+        
+        moves = self._board.legal_moves()
+        if(len(moves))<30:
+            self.maxDepth=4
+        else:
+            self.maxDepth=3
+        _, bestMove = self.alphaBeta(
+            self._board, self.maxDepth, float("-inf"), float("inf"), True
+        )
+        
+        print(f"Best move found: {bestMove}")
+        
+        if bestMove is None:
+            print("No best move found, choosing randomly")
             moves = self._board.legal_moves()
-            bestMove = choice(moves)
-        self._board.push(bestMove)
-        # New here: allows to consider internal representations of moves
+            if moves:
+                bestMove = choice(moves)
+            else:
+                return "PASS"
+        if not self._board.push(bestMove):
+            print("Best move was illegal, choosing randomly")
+            moves = self._board.legal_moves()
+            if moves:
+                bestMove = choice(moves)
+                self._board.push(bestMove)
+            else:
+                return "PASS"
+        
         print("I am playing ", self._board.move_to_str(bestMove))
         print("My current board :")
         self._board.prettyPrint()
-        # move is an internal representation. To communicate with the interface I need to change if to a string
         return Goban.Board.flat_to_name(bestMove)
 
     def playOpponentMove(self, move):

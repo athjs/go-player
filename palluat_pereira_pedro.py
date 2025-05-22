@@ -55,7 +55,7 @@ def get_raw_data_go():
     return data
 
 data = get_raw_data_go()
-print("We have", len(data),"examples")
+# print("We have", len(data),"examples")
 
 """## Compréhension des données de chaque entrée
 
@@ -77,7 +77,7 @@ def summary_of_example(data, sample_nb):
         print("Over these", sample["rollouts"], "games, black won", sample["black_wins"], "times with", sample["black_points"], "total points over all this winning games")
         print("Over these", sample["rollouts"], "games, white won", sample["white_wins"], "times with", sample["white_points"], "total points over all this winning games")
 
-summary_of_example(data,10)
+# summary_of_example(data,10)
 
 """## Données en entrée et en sortie de votre modèle final
 
@@ -93,22 +93,22 @@ Voici par exemple le modèle de la fonction qui pourra être appelée, au final 
 
 """
 
-def position_predict(black_stones, white_stones):
-
-    # ... Votre tambouille interne pour placer les pierres comme il faut dans votre structure de données
-    # et appeler votre modèle Keras (typiquement avec model.predict())
-    prediction = None # model.predict(...) # A REMPLIR CORRECTEMENT
-
-    return prediction
-
-# Par exemple, nous pourrons appeler votre prédiction ainsi
-
-print("Prediction this sample:")
-summary_of_example(data, 10)
-print()
-prediction = position_predict(data[10]["black_stones"], data[10]["white_stones"])
-print("You predicted", prediction, "and the actual target was", data[10]["black_wins"]/data[10]["rollouts"])
-
+# def position_predict(black_stones, white_stones):
+#
+#     # ... Votre tambouille interne pour placer les pierres comme il faut dans votre structure de données
+#     # et appeler votre modèle Keras (typiquement avec model.predict())
+#     prediction = None # model.predict(...) # A REMPLIR CORRECTEMENT
+#
+#     return prediction
+#
+# # Par exemple, nous pourrons appeler votre prédiction ainsi
+#
+# print("Prediction this sample:")
+# summary_of_example(data, 10)
+# print()
+# prediction = position_predict(data[10]["black_stones"], data[10]["white_stones"])
+# print("You predicted", prediction, "and the actual target was", data[10]["black_wins"]/data[10]["rollouts"])
+#
 # Ainsi, pour le rendu, en admettant que newdata soit la structure de données issue du json contenant les nouvelles données que
 # l'on vous donnera 24h avant la fin, vous pourrez construire le fichier resultat ainsi
 
@@ -121,21 +121,22 @@ def create_result_file(newdata):
 
 import matplotlib.pyplot as plt
 
-plt.title("Relationship between the depth of the board and the chance for black to win")
-plt.plot([sample["black_wins"] for sample in data],[sample["depth"] for sample in data], '.')
-plt.xlabel("black wins (percentage)")
-plt.ylabel("depth of the game")
+if __name__=="__main__":
+    plt.title("Relationship between the depth of the board and the chance for black to win")
+    plt.plot([sample["black_wins"] for sample in data],[sample["depth"] for sample in data], '.')
+    plt.xlabel("black wins (percentage)")
+    plt.ylabel("depth of the game")
 
 
 # Cumulative Distribution function of the chance of black to win
-cdf_wins = sorted([sample["black_wins"] for sample in data])
-plt.figure()
-plt.plot([x/len(cdf_wins) for x in range(len(cdf_wins))], cdf_wins)
-plt.grid()
-plt.title("Cumulative Distribution function of the chance of black to win")
-plt.xlabel("% of the samples with a chance of black to win below the y value")
-plt.ylabel("Chance of black to win")
-print("The CDF curve shows that black has more chances to win, globally")
+    cdf_wins = sorted([sample["black_wins"] for sample in data])
+    plt.figure()
+    plt.plot([x/len(cdf_wins) for x in range(len(cdf_wins))], cdf_wins)
+    plt.grid()
+    plt.title("Cumulative Distribution function of the chance of black to win")
+    plt.xlabel("% of the samples with a chance of black to win below the y value")
+    plt.ylabel("Chance of black to win")
+    print("The CDF curve shows that black has more chances to win, globally")
 
 """# First steps: transform all the data into numpy arrays to feed your neural network
 
@@ -301,7 +302,6 @@ def prepare_and_split_data(data, train_ratio=0.7, val_ratio=0.15, test_ratio=0.1
     )
 
     return train_dataset, val_dataset, test_dataset
-    return train_dataset, val_dataset, test_dataset
 
 def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler=None, num_epochs=20):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -377,7 +377,6 @@ if __name__=="__main__":
     )
     test_loss = evaluate_model(model, test_loader)
     torch.save(model.state_dict(), 'final_go_model.pth')
-    position_predict
 
 # position_predict = main()
 
@@ -398,7 +397,7 @@ def get_raw_data_go():
         data = json.loads(fz.read().decode("utf-8"))
     return data
 
-data = get_raw_data_go()
+# data = get_raw_data_go()
 
 def position_predict(black_stones, white_stones):
     """Prédit la probabilité de victoire de noir pour une position donnée"""
@@ -439,4 +438,4 @@ def create_result_file(newdata):
         for p in predictions:
             f.write(str(p) + "\n")
     return predictions
-create_result_file(data)
+# create_result_file(data)
